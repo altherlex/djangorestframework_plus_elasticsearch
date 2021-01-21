@@ -5,8 +5,9 @@ This is a quick documantion to help pythoners plug ElasticSearch on their Restfu
 This can become a library but it will be depending on Janus, the god of the time and future.
 
 ### Script to load previous data into ES
->>>>/main/management/commands/es_load_data.py
+
 ```python
+#/main/management/commands/es_load_data.py
 import json
 import requests
 from decouple import config
@@ -55,8 +56,9 @@ class Command(BaseCommand):
 ```
 
 ### Helpers
->>>>main/utilities/elasticsearch.py
+
 ```python
+# main/utilities/elasticsearch.py
 import os
 import json
 from decouple import config
@@ -144,8 +146,9 @@ ELASTICSEARCH_API=http://localhost:9200
 ```
 
 ### Dockerizing
->>>> docker-compose.yml
+
 ```shell
+# docker-compose.yml
   elasticsearch:
     container_name: elasticsearch
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.1
@@ -179,4 +182,30 @@ ELASTICSEARCH_API=http://localhost:9200
 volumes:
   elasticsearch-data:
     driver: local
+```
+
+## Signing on Updating 
+
+*Creating update signal*
+```python
+# /registration/utilities.py
+
+# DOC: Explicit invokes a signal that updates elasticsearch documents
+#   Due serializers that customizes the update method and eventually calls for the update() method instead of save()
+#   --> Update method doesn't call signals in Django
+
+post_update = Signal()
+class ESUpdateQuerySet(QuerySet):
+    def update(self, *args, **kwargs):
+        super().update(*args, **kwargs)
+        post_update.send(sender=self.model, instance=self, created=False)
+```
+*Calling update*
+```python
+# registration/models/remitter.py
+
+from registration.utilities import ESUpdateQuerySet
+class Remitter(models.Model):
+    objects = ESUpdateQuerySet.as_manager()
+...
 ```
